@@ -1,7 +1,7 @@
 require "rubygems"
 require 'packetfu'
 require 'optparse'
-#-----------------------   Variable Declaration   -------------------------------
+#-----------------------   Variable Declaration...   -----------------------------
 
 source_ip = nil
 sport=nil
