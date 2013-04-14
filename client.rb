@@ -1,6 +1,7 @@
 require "rubygems"
 require 'packetfu'
 require 'optparse'
+#a comment
 #-----------------------   Variable Declaration   -------------------------------
 
 source_ip = nil
