@@ -13,9 +13,10 @@
 #include <getopt.h>			//library for getting command line arguments..great tool!
 #include <string.h> //memset
 #include <sys/socket.h>    //for socket ofcourse
-#include <netinet/tcp.h>   //Provides declarations for tcp header
-#include <netinet/ip.h>   //Provides declarations for ip header
+#include "tcp.h" //tcp header
+#include "ip.h" //ip header
 #include "client.h"
+#define TH_SIN 0x06
 void print_usage()
 {
     printf("Usage: ./a.out -s <server ip> -c <client_ip> -p <port>\n");
@@ -98,20 +99,20 @@ int main(int argc, char *argv[])
     sin.sin_addr.s_addr = inet_addr(server_ip);
 
     //Forge the TCP checksum
-    pseudohdr.source_address = inet_addr( source_ip );
-    pseudohdr.dest_address = sin.sin_addr.s_addr;
-    pseudohdr.placeholder = 0;
-    pseudohdr.protocol = IPPROTO_TCP;
-    pseudohdr.tcp_length = htons(sizeof(struct tcphdr));
-	memcpy(pseudogram , (char*) &pseudohdr , sizeof (struct pseudo_header));
-    memcpy(pseudogram + sizeof(struct pseudo_header) , tcphdr , sizeof(struct tcphdr));
+    pseudohdr.source_address = inet_addr( client_ip );
+    pseudohdr.dest_address = sin.sin_addr.s_addr;
+    pseudohdr.placeholder = 0;
+    pseudohdr.protocol = IPPROTO_TCP;
+    pseudohdr.tcp_length = htons(sizeof(struct tcphdr));
+	memcpy(&pseudohdr , (char*) &pseudohdr , sizeof (struct pseudo_header));
+    memcpy(&pseudohdr + sizeof(struct pseudo_header) , tcph , sizeof(struct tcphdr));
 	//now set it with our pretend data ;)
-	tcph->check = csum( (unsigned short*) pseudogram , psize);
+	tcph->th_sum = calculate_checksum( (unsigned short*) &pseudohdr , iph->ip_len);
     
     int one = 1;
     const int *val = &one;
      
-    if (setsockopt (s, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
+    if (setsockopt (sfd, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
     {
         perror("Error setting IP_HDRINCL");
         exit(0);
@@ -123,19 +124,19 @@ int main(int argc, char *argv[])
 		printf("Can't open file %s \n",filename);
 	 	exit(1);
 	 }
-	else while((ch=fgetc(input)) !=EOF)
+	else while((ch=fgetc(file)) !=EOF)
 	//file opened...look through each character and send the packet
 	{
-		iphdr->id = ch; //the payload hidden in the id field
-		iphdr->seq = 1+(int)(10000.0*rand()/(RAND_MAX+1.0));
-		if (sendto (s, packet, iph->tot_len ,  0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
+		iph->ip_id = ch; //the payload hidden in the id field
+		tcph->th_seq = 1+(int)(10000.0*rand()/(RAND_MAX+1.0));
+		if (sendto (sfd, &packet, iph->ip_len ,  0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
         {
             perror("sendto failed");
         }
         //Data send successfully
         else
         {
-            printf ("Packet Send. Character : %c \n" , iph->id);
+            printf ("Packet Send. Character : %c \n" , iph->ip_id);
         }
 	}
 
@@ -144,44 +145,38 @@ int main(int argc, char *argv[])
 /*
 * 	Fills in the a supplied IP header
 */
-void fill_iphdr(struct ip* ip_header, char* source_ip, char* dest_ip)
+void fill_iphdr(struct ip* iph, char* source_ip, char* dest_ip)
 {
     //Fill in the IP Header
-    iph->ihl = 5;
-    iph->version = 4;
-    iph->tos = 0;
-    iph->tot_len = sizeof (struct iphdr) + sizeof (struct tcphdr) + strlen(data);
-    iph->id = htonl (54321); //Id of this packet
-    iph->frag_off = 0;
-    iph->ttl = 255;
-    iph->protocol = IPPROTO_TCP;
-    iph->check = 0;      //Set to 0 before calculating checksum
-    iph->saddr = inet_addr(source_ip);    //Spoof the source ip address
-    iph->daddr = inet_addr(dest_ip);
+    iph->ip_hl = 5;
+    iph->ip_v = 4;
+    iph->ip_tos = 0;
+    iph->ip_len = sizeof (struct ip) + sizeof (struct tcphdr);
+    iph->ip_id = htons(54321); //Id of this packet
+    iph->ip_off = 0;
+    iph->ip_ttl = 255;
+    iph->ip_p = IPPROTO_TCP;
+    iph->ip_sum = 0;      //Set to 0 before calculating checksum
+    iph->ip_src = inet_addr(source_ip);    //Spoof the source ip address
+    iph->ip_dst = inet_addr(dest_ip);
      
 
 }
 /*
 * 	Fills in the a supplied TCP header
 */
-void fill_tcphdr(struct ip* ip_header, char* source_port, char* dest_port)
+void fill_tcphdr(struct tcphdr* tcph, char* source_port, char* dest_port)
 {
     //Fill in TCP Header
-    tcph->source = htons(source_port);
-    tcph->dest = htons(dest_port);
-    tcph->seq = 0;
-    tcph->ack_seq = 0;
-    tcph->doff = 5;  //tcp header size
-    tcph->fin=0;
-    tcph->syn=1;
-    tcph->rst=0;
-    tcph->psh=0;
-    tcph->ack=0;
-    tcph->urg=0;
-    tcph->window = htons (5840); /* maximum allowed window size */
-    tcph->check = 0; //leave checksum 0 now, filled later by pseudo header
-    tcph->urg_ptr = 0
-
+    tcph->th_sport = htons(atoi(source_port));
+    tcph->th_dport = htons(atoi(dest_port));
+    tcph->th_seq = 0;
+    tcph->th_ack = 0;
+    tcph->th_off = 5;  //tcp header size
+    tcph->th_flags = TH_SIN;
+    tcph->th_win = htons (5840); /* maximum allowed window size */
+    tcph->th_sum = 0; //leave checksum 0 now, filled later by pseudo header
+    tcph->th_urp = 0;
 
 }
 

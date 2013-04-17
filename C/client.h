@@ -4,9 +4,8 @@
 #include <getopt.h>     //library for getting command line arguments..great tool!
 #include <string.h> //memset
 #include <sys/socket.h>    //for socket ofcourse
-#include <netinet/tcp.h>   //Provides declarations for tcp header
-#include <netinet/ip.h>   //Provides declarations for tcp header
-
+#include "tcp.h" //tcp header
+#include "ip.h" //ip header
 #define PCKT_LEN 8192
 
 /*
