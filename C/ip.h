@@ -1,31 +1,4 @@
 /*
- * Copyright (c) 2000 Apple Computer, Inc. All rights reserved.
- *
- * @APPLE_OSREFERENCE_LICENSE_HEADER_START@
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. The rights granted to you under the License
- * may not be used to create, or enable the creation or redistribution of,
- * unlawful or unlicensed copies of an Apple operating system, or to
- * circumvent, violate, or enable the circumvention or violation of, any
- * terms of an Apple operating system software license agreement.
- * 
- * Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_OSREFERENCE_LICENSE_HEADER_END@
- */
-/*
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -63,11 +36,6 @@
 
 #ifndef _NETINET_IP_H_
 #define _NETINET_IP_H_
-#include <sys/appleapiopts.h>
-#include <sys/types.h>		/* XXX temporary hack to get u_ types */
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-
 
 /*
  * Definitions for internet protocol version 4.
@@ -102,7 +70,7 @@ struct ip {
 	u_char	ip_ttl;			/* time to live */
 	u_char	ip_p;			/* protocol */
 	u_short	ip_sum;			/* checksum */
-	struct	in_addr ip_src,ip_dst;	/* source and dest address */
+	int32_t ip_src, ip_dst;	/* source and dest address */
 };
 
 #ifdef _IP_VHL
@@ -121,21 +89,10 @@ struct ip {
 #define	IPTOS_THROUGHPUT	0x08
 #define	IPTOS_RELIABILITY	0x04
 #define	IPTOS_MINCOST		0x02
-#if 1
-/* ECN RFC3168 obsoletes RFC2481, and these will be deprecated soon. */
-#define	IPTOS_CE		0x01
-#define	IPTOS_ECT		0x02
-#endif
+/* ECN bits proposed by Sally Floyd */
+#define	IPTOS_CE		0x01	/* congestion experienced */
+#define	IPTOS_ECT		0x02	/* ECN-capable transport */
 
-/*
- * ECN (Explicit Congestion Notification) codepoints in RFC3168
- * mapped to the lower 2 bits of the TOS field.
- */
-#define	IPTOS_ECN_NOTECT	0x00	/* not-ECT */
-#define	IPTOS_ECN_ECT1		0x01	/* ECN-capable transport (1) */
-#define	IPTOS_ECN_ECT0		0x02	/* ECN-capable transport (0) */
-#define	IPTOS_ECN_CE		0x03	/* congestion experienced */
-#define	IPTOS_ECN_MASK		0x03	/* ECN field mask */
 
 /*
  * Definitions for IP precedence (also in ip_tos) (hopefully unused)
@@ -196,10 +153,10 @@ struct	ip_timestamp {
 		ipt_flg:4;		/* flags, see below */
 #endif
 	union ipt_timestamp {
-		n_long	ipt_time[1];
+		u_long	ipt_time[1];
 		struct	ipt_ta {
 			struct in_addr ipt_addr;
-			n_long ipt_time;
+			u_long ipt_time;
 		} ipt_ta[1];
 	} ipt_timestamp;
 };
@@ -229,3 +186,5 @@ struct	ip_timestamp {
 #define	IP_MSS		576		/* default maximum segment size */
 
 #endif
+
+

@@ -1,32 +1,7 @@
+/*	BSDI tcp.h,v 2.11 1996/10/11 16:01:49 pjd Exp	*/
+
 /*
- * Copyright (c) 2000-2011 Apple Computer, Inc. All rights reserved.
- *
- * @APPLE_OSREFERENCE_LICENSE_HEADER_START@
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. The rights granted to you under the License
- * may not be used to create, or enable the creation or redistribution of,
- * unlawful or unlicensed copies of an Apple operating system, or to
- * circumvent, violate, or enable the circumvention or violation of, any
- * terms of an Apple operating system software license agreement.
- * 
- * Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_OSREFERENCE_LICENSE_HEADER_END@
- */
-/*
- * Copyright (c) 1982, 1986, 1993
+ * Copyright (c) 1982, 1986, 1993, 1998
  *	The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -58,160 +33,261 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp.h,v 1.13.2.3 2001/03/01 22:08:42 jlemon Exp $
  */
 
 #ifndef _NETINET_TCP_H_
 #define _NETINET_TCP_H_
-#include <sys/appleapiopts.h>
-#include <sys/_types.h>
-#include <machine/endian.h>
 
-#if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)
-typedef	__uint32_t tcp_seq;
-typedef __uint32_t tcp_cc;		/* connection count per rfc1644 */
-
-#define tcp6_seq	tcp_seq	/* for KAME src sync over BSD*'s */
-#define tcp6hdr		tcphdr	/* for KAME src sync over BSD*'s */
-
+typedef	u_long	tcp_seq;
 /*
  * TCP header.
  * Per RFC 793, September, 1981.
  */
 struct tcphdr {
-	unsigned short	th_sport;	/* source port */
-	unsigned short	th_dport;	/* destination port */
+	u_short	th_sport;		/* source port */
+	u_short	th_dport;		/* destination port */
 	tcp_seq	th_seq;			/* sequence number */
 	tcp_seq	th_ack;			/* acknowledgement number */
-#if __DARWIN_BYTE_ORDER == __DARWIN_LITTLE_ENDIAN
-	unsigned int	th_x2:4,	/* (unused) */
-			th_off:4;	/* data offset */
+#if BYTE_ORDER == LITTLE_ENDIAN 
+	u_char	th_x2:4,		/* (unused) */
+		th_off:4;		/* data offset */
 #endif
-#if __DARWIN_BYTE_ORDER == __DARWIN_BIG_ENDIAN
-	unsigned int	th_off:4,	/* data offset */
-			th_x2:4;	/* (unused) */
+#if BYTE_ORDER == BIG_ENDIAN 
+	u_char	th_off:4,		/* data offset */
+		th_x2:4;		/* (unused) */
 #endif
-	unsigned char	th_flags;
+
+#define TH_ELN  0x1 /* explicit loss notification */
+#define TH_ECN  0x2 /* explicit congestion notification */
+#define TH_FS   0x4 /* fast start */
+
+	u_char	th_flags;
 #define	TH_FIN	0x01
 #define	TH_SYN	0x02
 #define	TH_RST	0x04
 #define	TH_PUSH	0x08
 #define	TH_ACK	0x10
 #define	TH_URG	0x20
-#define	TH_ECE	0x40
-#define	TH_CWR	0x80
-#define	TH_FLAGS	(TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
-
-	unsigned short	th_win;		/* window */
-	unsigned short	th_sum;		/* checksum */
-	unsigned short	th_urp;		/* urgent pointer */
+	u_short	th_win;			/* window */
+	u_short	th_sum;			/* checksum */
+	u_short	th_urp;			/* urgent pointer */
 };
 
 #define	TCPOPT_EOL		0
 #define	TCPOPT_NOP		1
 #define	TCPOPT_MAXSEG		2
+
+#define REMAP_SET_FROM		100
+#define REMAP_SET_TO		101
+
 #define TCPOLEN_MAXSEG		4
 #define TCPOPT_WINDOW		3
 #define TCPOLEN_WINDOW		3
 #define TCPOPT_SACK_PERMITTED	4		/* Experimental */
 #define TCPOLEN_SACK_PERMITTED	2
-#define TCPOPT_SACK		5		/* Experimental */
-#define TCPOLEN_SACK		8		/* len of sack block */
+#define TCPOPT_SACK		5 /* Experimental */
+/*#define TCPOPT_SACK		6	*/	/* XXX FOR EXPTS ONLY */
+#ifdef ACC
+#define TCPOPT_PEERWIN          7
+#define TCPOLEN_PEERWIN         4
+#define TCPOPT_PEERWIN_HDR      (TCPOPT_PEERWIN<<8|TCPOLEN_PEERWIN)
+#endif
 #define TCPOPT_TIMESTAMP	8
-#define TCPOLEN_TIMESTAMP	10
-#define TCPOLEN_TSTAMP_APPA		(TCPOLEN_TIMESTAMP+2) /* appendix A */
-#define TCPOPT_TSTAMP_HDR		\
+#define    TCPOLEN_TIMESTAMP		10
+#define    TCPOLEN_TSTAMP_APPA		(TCPOLEN_TIMESTAMP+2) /* appendix A */
+
+#define TCPOPT_TSTAMP_HDR	\
     (TCPOPT_NOP<<24|TCPOPT_NOP<<16|TCPOPT_TIMESTAMP<<8|TCPOLEN_TIMESTAMP)
 
-#define	MAX_TCPOPTLEN		40	/* Absolute maximum TCP options len */
-
-#define	TCPOPT_CC		11		/* CC options: RFC-1644 */
-#define TCPOPT_CCNEW		12
-#define TCPOPT_CCECHO		13
-#define	   TCPOLEN_CC			6
-#define	   TCPOLEN_CC_APPA		(TCPOLEN_CC+2)
-#define	   TCPOPT_CC_HDR(ccopt)		\
-    (TCPOPT_NOP<<24|TCPOPT_NOP<<16|(ccopt)<<8|TCPOLEN_CC)
-#define	TCPOPT_SIGNATURE		19	/* Keyed MD5: RFC 2385 */
-#define	   TCPOLEN_SIGNATURE		18
-
-/* Option definitions */
-#define TCPOPT_SACK_PERMIT_HDR	\
+#define TCPOPT_SACK_PERMIT_HDR  \
 (TCPOPT_NOP<<24|TCPOPT_NOP<<16|TCPOPT_SACK_PERMITTED<<8|TCPOLEN_SACK_PERMITTED)
-#define	TCPOPT_SACK_HDR		(TCPOPT_NOP<<24|TCPOPT_NOP<<16|TCPOPT_SACK<<8)
-/* Miscellaneous constants */
-#define	MAX_SACK_BLKS	6	/* Max # SACK blocks stored at sender side */
-#define	TCP_MAX_SACK	3	/* MAX # SACKs sent in any segment */
+#define TCPOPT_SACK_HDR         (TCPOPT_NOP<<24|TCPOPT_NOP<<16|TCPOPT_SACK<<8)
+
+#ifdef SACK
+#define TCPOLEN_SACK            8 /* 2*sizeof(tcp_seq): len of a sack block */
+#endif
+
+/* NOTE: SMART and SACK are mutually exclusive */
+#define TCPOPT_SMART  5
+#define TCPOLEN_SMART 10 
+
+#define TCPOLEN_SMART_TOTAL (TCPOLEN_SMART + 2) /* including 2 leading NOPs */
+#define TCPOPT_SMART_HDR       \
+    (TCPOPT_NOP<<24|TCPOPT_NOP<<16|TCPOPT_SMART<<8|TCPOLEN_SMART)
 
 
 /*
  * Default maximum segment size for TCP.
- * With an IP MTU of 576, this is 536,
- * but 512 is probably more convenient.
- * This should be defined as MIN(512, IP_MSS - sizeof (struct tcpiphdr)).
+ * With an IP MSS of 576, this is 536,
+ * but 512 bytes of data is probably more convenient.
+ * However, we must leave space for timestamp options (12 bytes).
  */
-#define	TCP_MSS	512
-
-/*
- * TCP_MINMSS is defined to be 216 which is fine for the smallest
- * link MTU (256 bytes, SLIP interface) in the Internet.
- * However it is very unlikely to come across such low MTU interfaces
- * these days (anno dato 2004).
- * Probably it can be set to 512 without ill effects. But we play safe.
- * See tcp_subr.c tcp_minmss SYSCTL declaration for more comments.
- * Setting this to "0" disables the minmss check.
- */
-#define	TCP_MINMSS 216
-
-/*
- * TCP_MINMSSOVERLOAD is defined to be 1000 which should cover any type
- * of interactive TCP session.
- * See tcp_subr.c tcp_minmssoverload SYSCTL declaration and tcp_input.c
- * for more comments.
- * Setting this to "0" disables the minmssoverload check.
- */
-#define	TCP_MINMSSOVERLOAD 1000
-
-/*
- * Default maximum segment size for TCP6.
- * With an IP6 MSS of 1280, this is 1220,
- * but 1024 is probably more convenient. (xxx kazu in doubt)
- * This should be defined as MIN(1024, IP6_MSS - sizeof (struct tcpip6hdr))
- */
-#define	TCP6_MSS	1024
+#ifdef LARGE_IP_MSS
+#ifdef IPINIP
+#define	TCP_MSS	 (IP_MSS - sizeof (struct tcpiphdr) - sizeof(struct ip))
+#else
+#define	TCP_MSS	 (IP_MSS - sizeof (struct tcpiphdr))
+#endif
+#else
+#define	TCP_MSS	536
+#endif
 
 #define	TCP_MAXWIN	65535	/* largest value for (unscaled) window */
-#define	TTCP_CLIENT_SND_WND	4096	/* dflt send window for T/TCP client */
 
 #define TCP_MAX_WINSHIFT	14	/* maximum window shift */
-
-#define TCP_MAXHLEN	(0xf<<2)	/* max length of header in bytes */
-#define TCP_MAXOLEN	(TCP_MAXHLEN - sizeof(struct tcphdr))
-					/* max space left for options */
-#endif /* (_POSIX_C_SOURCE && !_DARWIN_C_SOURCE) */
 
 /*
  * User-settable options (used with setsockopt).
  */
-#define	TCP_NODELAY             0x01    /* don't delay send to coalesce packets */
-#if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)
-#define	TCP_MAXSEG              0x02    /* set maximum segment size */
-#define TCP_NOPUSH              0x04    /* don't push last block of write */
-#define TCP_NOOPT               0x08    /* don't use TCP options */
-#define TCP_KEEPALIVE           0x10    /* idle time used when SO_KEEPALIVE is enabled */
-#define TCP_CONNECTIONTIMEOUT   0x20    /* connection timeout */
-#define PERSIST_TIMEOUT		0x40	/* time after which a connection in
-					 *  persist timeout will terminate.
-					 *  see draft-ananth-tcpm-persist-02.txt
-					 */
-#define TCP_RXT_CONNDROPTIME	0x80	/* time after which tcp retransmissions will be 
-					 * stopped and the connection will be dropped
-					 */
-#define TCP_RXT_FINDROP	0x100	/* when this option is set, drop a connection 
-					 * after retransmitting the FIN 3 times. It will
-					 * prevent holding too many mbufs in socket 
-					 * buffer queues.
-					 */
-#endif /* (_POSIX_C_SOURCE && !_DARWIN_C_SOURCE) */
+#define	TCP_NODELAY	0x01	/* don't delay send to coalesce packets */
+#define	TCP_MAXSEG	0x02	/* set maximum segment size */
+#define	TCP_STDURG	0x03	/* URGENT pointer is last byte of urgent data */
 
+#ifdef KERNEL
+/* Parameters that can be set with sysctl. */
+int	pmtu_expire;
+int	pmtu_probe;
+int	tcp_43maxseg;		/* Fill in MAXSEG per 4.2BSD rules */
+int	tcp_conntimeo;		/* initial connection timeout */
+int	tcp_do_rfc1323;
+int	tcp_keepcnt;		/* max idle probes */
+int	tcp_keepidle;		/* time before probing idle */
+int	tcp_keepintvl;		/* interval betwn idle probes */
+int	tcp_maxpersistidle;	/* max idle time in persist */
+int	tcp_pmtu;		/* turn on path MTU discovery code */
+int	tcp_recvspace;
+int	tcp_sendspace;
+int 	tcp_mssdflt;
+int 	tcp_rttdflt;
+int	tcp_syn_cache_limit;	/* Maximum # entries allowed in SYN cache */
+int	tcp_syn_cache_interval;	/* Interval for SYN cache timer, in 1/2 secs */
+int	tcp_syn_bucket_limit;
 #endif
+
+/* snoop and related expts (esp. ber generation) */
+#define	TCP_SNOOP_ERRPROB0	0x101
+#define	TCP_SNOOP_ERRPROB1	0x102
+#define	TCP_SNOOP_BER_MODEL	0x103  
+#define	TCP_SNOOP_TRANS0	0x104
+#define	TCP_SNOOP_TRANS1	0x105
+#define TCP_SNOOP_TIMERGRAN	0x106
+#define TCP_SNOOP_BER_DISABLE   0x107   /* disable generation of errors */
+#define TCP_SNOOP_DISABLE       0x108   /* disable snoop operation */
+#define TCP_SNOOP_BASE          0x109   /* disable snoop operation */
+#define TCP_SNOOP_MASK          0x10a   /* disable snoop operation */
+  
+/* tcp_stats, itcp, linkemu, eln, newreno, etc. */
+#define TCP_ENABLE_STATS        0x200 /* collect TCP-related statistics */
+#define ITCP_WIRED_SOCKET_SET   0x201 /* set socket for wired ITCP conn */
+#define ITCP_WLESS_SOCKET_SET   0x202 /* set socket for the wless TICP conn */
+#define ITCP_WIRED_SOCKET_CLR   0x203 /* clear socket for wired I-TCP */ 
+#define ITCP_WLESS_SOCKET_CLR   0x204 /* clear socket for wireless I-TCP */
+#define TCP_SNOOP_LINKEMU_ENABLE 0x205/* emulation of link-level retx */
+#define TCP_ELN_ENABLE          0x206 /* enable ELN to the sender */
+#define TCP_ELN_THRESH          0x207
+#define TCP_ELN_ORDER           0x208
+#define TCP_SNOOP_REXMT_DISABLE 0x209 /* disable snoop/local rexmission */
+#define TCP_SMART_ENABLE        0x20a /* enable SMART rexmission scheme */
+#define TCP_SMART_SNOOP_ENABLE  0x20b /* snoop + SMART */
+#define TCP_PERFECT_ELN_ENABLE  0x20c /* perfect ELN information */
+#define TCP_SNOOP_BURSTRATE     0x20d /* burst rate of packet errors */
+#define TCP_NEWRENO_ENABLE      0x20e /*extend fast recovery on partial acks*/
+#define TCP_GET_SRTT            0x20f /* get srtt from kernel */
+#define TCP_GET_RTTVAR          0x210 /* get rtt variance from kernel */
+#define TCP_NEWRENO_ENABLE_FOR_CONN 0x211  /* per-connection NEWRENO */
+
+/* TCP SACK and Enhanced Recovery */
+#define TCP_SACK_DISABLE        0x300 /* per-connection SACKs */
+#define TCP_DO_SACK             0x301 /* SACKs */
+#define TCP_ENH_RECOVERY        0x302 /* enhanced loss recovery mode */
+#define TCP_ER                  0x303 /* per-connection ER */
+#define TCP_ER_ALLCONNS         0x304 /* All conns ER (superceded by above) */
+
+/* Asymmetric network stuff: DirecPC, delacks, etc. */
+#define TCP_IGNORE_PEER         0x400 /* Ignore peer's mss (asymmetry) */
+#define TCP_NOTSTAMP            0x401 /* Eliminate timestamps */
+#define TCP_ADVT_LARGE_MSS      0x402 /* Advertise large mss */
+#define TCP_DELACKS_ENABLE      0x403 /* Delayed acks */
+#define TCP_SS_DELACK_OK        0x404 /* okay to delay acks during peer's
+					 slow start phase */
+#define TCP_PEER_MSS            0x405 /* MSS used by peer */
+#define TCP_MAXBURST            0x406 /* maximum burst size for TCP sender */
+#define TCP_CANCEL_BURST        0x407 /* cancel pending burst in tcp_output? */
+#define TCP_MIN_ACKS_PER_WIN    0x408 /* minimum # of acks to send per win */
+#define TCP_COUNT_BYTES_ACKED   0x409 /* count bytes acked for new cwnd */
+ 
+/* misc. */
+#define TCP_SND_CWND_SCALE      0x500 /* scaling factor initial snd_cwnd */
+#define TCP_FAST_START_ENABLE   0x501 /* enable TCP fast start */
+#define TCP_FAST_START_FLR_ENABLE 0x502 /* enable TCP-FS fast loss recovery */
+#define TCP_FAST_START_FRT_ENABLE 0x503 /* enable TCP-FS fast reset timer  */
+#define TCP_NO_QUENCH           0x504 /* tcp_quench not called when ip_output fails */ 
+#define TCP_SESSION_ENABLE      0x505 /* enable TCP session */
+#define TCP_ENABLE_SESSION_STATS 0x506 /* enable stats for TCP session */
+#define TCP_SESSION_INCR_CWND   0x507 /* increment session cwnd for each new conn */
+#define TCP_LOW_DELAY           0x508 /* set IPTOS_LOWDELAY for pkts of this conn */
+/*
+ * Names for TCP sysctl objects
+ */
+#define	TCPCTL_MSSDFLT		1	/* default seg size */
+#define	TCPCTL_DO_RFC1323	2	/* use RFC1323 options */
+#define	TCPCTL_KEEPIDLE		3	/* time before probing idle */
+#define	TCPCTL_KEEPINTVL	4	/* interval betwn idle probes */
+#define	TCPCTL_KEEPCNT		5	/* max idle probes */
+#define	TCPCTL_MAXPERSISTIDLE	6	/* max idle time in persist */
+#define	TCPCTL_SENDSPACE	7	/* default send buffer */
+#define	TCPCTL_RECVSPACE	8	/* default recv buffer */
+#define	TCPCTL_CONNTIMEO	9	/* default recv buffer */
+#define	TCPCTL_PMTU		10	/* Enable path MTU discovery */
+#define	TCPCTL_PMTU_EXPIRE	11	/* When to expire discovered MTU info */
+#define	TCPCTL_PMTU_PROBE	12	/* When probing for higher MTU */
+#define	TCPCTL_43MAXSEG		13	/* Fill in MAXSEG per 4.3BSD rules */
+#define	TCPCTL_STATS		14	/* statistics */
+#define	TCPCTL_SYN_CACHE_LIMIT	15	/* Max size of SYN cache */
+#define	TCPCTL_SYN_BUCKET_LIMIT	16	/* Max size of buckets in SYN cache */
+#define	TCPCTL_SYN_CACHE_INTER	17	/* Interval for SYN cache timer */
+#define	TCPCTL_MAXID		18
+
+#define	TCPCTL_NAMES { \
+	{ 0, 0 }, \
+	{ "mssdflt", CTLTYPE_INT }, \
+	{ "do_rfc1323", CTLTYPE_INT }, \
+	{ "keepidle", CTLTYPE_INT }, \
+	{ "keepinterval", CTLTYPE_INT }, \
+	{ "keepcount", CTLTYPE_INT }, \
+	{ "maxpersistidle", CTLTYPE_INT }, \
+	{ "sendspace", CTLTYPE_INT }, \
+	{ "recvspace", CTLTYPE_INT }, \
+	{ "conntimeo", CTLTYPE_INT }, \
+	{ "pmtu", CTLTYPE_INT }, \
+	{ "pmtu_expire", CTLTYPE_INT }, \
+	{ "pmtu_probe", CTLTYPE_INT }, \
+	{ "43maxseg", CTLTYPE_INT }, \
+	{ "stats", CTLTYPE_STRUCT }, \
+	{ "syn_cache_limit", CTLTYPE_INT }, \
+	{ "syn_bucket_limit", CTLTYPE_INT }, \
+	{ "syn_cache_interval", CTLTYPE_INT }, \
+}
+
+#define	TCPCTL_VARS { \
+	0, \
+	&tcp_mssdflt, \
+	&tcp_do_rfc1323, \
+	&tcp_keepidle, \
+	&tcp_keepintvl, \
+	&tcp_keepcnt, \
+	&tcp_maxpersistidle, \
+	&tcp_sendspace, \
+	&tcp_recvspace, \
+	&tcp_conntimeo, \
+	&tcp_pmtu, \
+	&pmtu_expire, \
+	&pmtu_probe, \
+	&tcp_43maxseg, \
+	0, \
+	&tcp_syn_cache_limit, \
+	&tcp_syn_bucket_limit, \
+	&tcp_syn_cache_interval, \
+}
+
+#endif /* !_NETINET_TCP_H_ */

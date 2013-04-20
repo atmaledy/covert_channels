@@ -11,9 +11,14 @@
 /*
   Caculate's the TCP checksum
 */
-unsigned short calculate_checksum(unsigned short *buf, int len);
+void print_usage();
+unsigned short calculate_checksum(unsigned short *, int );
+void fill_iphdr( struct ip* , char* , char* );
+void fill_tcphdr( struct tcphdr* , int , int );
+void send_file( int, struct sockaddr_in , char* , char* );
+void send_char(int , struct sockaddr_in , char* , char );
 
-void fill_iphdr(struct ip* ip_header, char* source_ip, char* dest_ip);
+char* get_if_ip( char* );
 
 /* 
     96 bit (12 bytes) pseudo header needed for tcp header checksum calculation 
