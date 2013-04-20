@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
 #include <getopt.h>			//library for getting command line arguments..great tool!
 #include <sys/socket.h> //for socket function
 #include <netinet/in.h>
@@ -61,49 +60,64 @@ int main(int argc, char *argv[])
            		print_usage();
            		break;
     	}
-  	if((sfd = socket(AF_INET, SOCK_RAW, 6)) < 0) {
+      if((sfd = socket(AF_INET, SOCK_RAW, 6)) < 0) {
       perror("Cannot open socket");
       exit(2);
     }
   }
+  
   struct in_addr inaddr;
   inaddr.s_addr = inet_addr(client_ip);
        
   //got our args...now start recieving
   memset (packet, 0, 10);
- 	//IP header
+  //IP header
   struct ip *iph = (struct ip *) packet;
   //TCP header
   struct tcphdr *tcph = (struct tcphdr *) (packet + sizeof (struct ip)); //after the iphdr comes the tcphdr
   int index=0;
-  char* filename;
+  char filename[255];
   //until the whole filename comes down the line...
   while(1)
   {
     read(sfd, &packet, sizeof(packet));
-    printf("read!\n");
-      
-    if(tcph->th_flags = TH_SIN && iph->ip_src == inaddr.s_addr && tcph->th_sport == port) {
-      if(iph->ip_id == 0xFE) //this is our EOF char to indicate that we are done recieving the filename
-        break;
+ 
+//    printf("%d, %d\n", tcph->th_dport, htons(port));
+    if(tcph->th_flags = TH_SIN && iph->ip_src == inaddr.s_addr && tcph->th_dport == htons(port)) {
+ 	   
+	if(iph->ip_id == 0xFE) //this is our EOF char to indicate that we are done recieving the filename
+      	  break;
         else
-        filename[index] = iph->ip_id;
+	{
+            if(index < 254){ //exceeded max file name length
+  
+               filename[index] = iph->ip_id;
+	        index++;
+	    }	
+        }
       }
   
     }
-  file = fopen(filename, "w+");//open the file
+  if((file = fopen(filename, "w+")) == NULL)
+  {
+	printf("Can't write the file\n");
+	exit(EXIT_FAILURE);
+
+  }
   while(1)
   {
     //we have the filename now get the actual file
     read(sfd, &packet, sizeof(packet));
-    printf("read!\n");
+    
       
-    if(tcph->th_flags = TH_SIN && iph->ip_src == inaddr.s_addr && tcph->th_sport == port) {
+    if(tcph->th_flags = TH_SIN && iph->ip_src == inaddr.s_addr && tcph->th_dport == htons(port)) {
       if(iph->ip_id == 0xFE) //got whole file, next thing to read() is a filename (until we get another 0xFE symbol.)
         break;
         else
           fputc(iph->ip_id, file);
     }
+    fclose(file);
+    printf("Received file: %s", filename);
   }
 
 }
