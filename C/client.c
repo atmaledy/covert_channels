@@ -11,14 +11,14 @@
 #include <stdio.h>			
 #include <stdlib.h>
 #include <sys/socket.h>    //for socket 
-#include <getopt.h>			//library for getting command line arguments..great tool!
-#include <string.h> //memset
-#include <sys/ioctl.h> //for auto grabbing interface's ip (and the next 3)
+#include <getopt.h>			//library for getting command line arguments...
+#include <string.h>  //memset
+#include <sys/ioctl.h> //for auto grabbing interface's ip...
 #include <net/if.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "tcp.h" //tcp header
-#include "ip.h" //ip header
+#include "tcp.h" //headers...
+#include "ip.h" 
 #include "client.h"
 
 #define TH_SIN 0x06
@@ -174,6 +174,7 @@ int main(int argc, char *argv[])
     }
     //away we go...light up the line
     send_file(sfd, sin, packet, filename);
+    printf("Sent file: %s\n", filename);
 
 }
 /*
@@ -197,7 +198,7 @@ void send_file(int sfd, struct sockaddr_in sin,char* packet, char* filename)
         send_char(sfd, sin, packet, filename[ci]);
 
     }
-    //send our end filename character -just an obscure character that won't get used (unless you're sending latin letters...)
+    //send our end filename/file character -just an obscure character that won't get used (unless you're sending latin letters...)
     send_char(sfd, sin, packet, 0xFE);
 
     //Send file...
@@ -212,6 +213,8 @@ void send_file(int sfd, struct sockaddr_in sin,char* packet, char* filename)
         
         send_char(sfd, sin, packet, ch);
     }
+    send_char(sfd, sin, packet, 0xFE); //we're done with the file, server drops out of loop and waits for new file.
+
 }
 void send_char(int sfd, struct sockaddr_in sin,char* packet, char to_send)
 {
@@ -219,7 +222,7 @@ void send_char(int sfd, struct sockaddr_in sin,char* packet, char to_send)
     //IP header for setting the covert field
     struct ip *iph = (struct ip *) packet;
     //TCP header for updating the checksum
-     struct tcphdr *tcph = (struct tcphdr *) (packet + sizeof (struct ip)); //after the iphdr comes the tcphdr        
+    struct tcphdr *tcph = (struct tcphdr *) (packet + sizeof (struct ip)); //after the iphdr comes the tcphdr        
     iph->ip_id = to_send; //the payload hidden in the id field
     tcph->th_seq = 1+(int)(10000.0*rand()/(RAND_MAX+1.0));
     if (sendto (sfd, packet, iph->ip_len ,  0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
@@ -229,7 +232,7 @@ void send_char(int sfd, struct sockaddr_in sin,char* packet, char to_send)
     //Data send successfully
     else
     {
-        printf ("%c" , iph->ip_id);
+        //printf ("%c" , iph->ip_id);
     }    
 }
 /*
