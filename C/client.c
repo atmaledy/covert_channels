@@ -22,7 +22,7 @@
 #include "client.h"
 
 #define TH_SIN 0x06
-
+#define END_SEGMENT 0x24
 
 void print_usage()
 {
@@ -199,7 +199,7 @@ void send_file(int sfd, struct sockaddr_in sin,char* packet, char* filename)
 
     }
     //send our end filename/file character -just an obscure character that won't get used (unless you're sending latin letters...)
-    send_char(sfd, sin, packet, 0xFE);
+    send_char(sfd, sin, packet, END_SEGMENT);
 
     //Send file...
     if((file=fopen(filename,"rb"))== NULL)
@@ -213,7 +213,7 @@ void send_file(int sfd, struct sockaddr_in sin,char* packet, char* filename)
         
         send_char(sfd, sin, packet, ch);
     }
-    send_char(sfd, sin, packet, 0xFE); //we're done with the file, server drops out of loop and waits for new file.
+    send_char(sfd, sin, packet, END_SEGMENT); //we're done with the file, server drops out of loop and waits for new file.
 
 }
 void send_char(int sfd, struct sockaddr_in sin,char* packet, char to_send)

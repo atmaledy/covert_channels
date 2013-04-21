@@ -20,7 +20,7 @@
 #include "ip.h" //ip header
 #include "server.h"
 #define TH_SIN 0x06
-
+#define END_SEGMENT 0x24 //end of segment character
 void print_usage()
 {
     printf("Usage: ./server -s <source ip (the client ip)> -p <port to listen on> ");
@@ -85,13 +85,14 @@ int main(int argc, char *argv[])
 //    printf("%d, %d\n", tcph->th_dport, htons(port));
     if(tcph->th_flags = TH_SIN && iph->ip_src == inaddr.s_addr && tcph->th_dport == htons(port)) {
  	   
-	if(iph->ip_id == 0xFE) //this is our EOF char to indicate that we are done recieving the filename
+	if(iph->ip_id == END_SEGMENT) //this is our EOF char to indicate that we are done recieving the filename
       	  break;
         else
 	{
             if(index < 254){ //exceeded max file name length
   
-               filename[index] = iph->ip_id;
+		//printf("%X\n", iph->ip_id);               
+		filename[index] = iph->ip_id;
 	        index++;
 	    }	
         }
@@ -111,13 +112,13 @@ int main(int argc, char *argv[])
     
       
     if(tcph->th_flags = TH_SIN && iph->ip_src == inaddr.s_addr && tcph->th_dport == htons(port)) {
-      if(iph->ip_id == 0xFE) //got whole file, next thing to read() is a filename (until we get another 0xFE symbol.)
+      if(iph->ip_id == END_SEGMENT) //got whole file, next thing to read() is a filename (until we get another END_SEGMENT symbol.)
         break;
         else
           fputc(iph->ip_id, file);
     }
-    fclose(file);
-    printf("Received file: %s", filename);
+   
   }
-
+  fclose(file);
+  printf("Recieved file: %s \n", filename);
 }

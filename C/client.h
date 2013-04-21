@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <getopt.h>     //library for getting command line arguments..great tool!
 #include <string.h> //memset
-#include <sys/socket.h>    //for socket ofcourse
+//#include <sys/socket.h>    //for socket ofcourse
 #include "tcp.h" //tcp header
 #include "ip.h" //ip header
 #define PCKT_LEN 8192
