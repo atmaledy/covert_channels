@@ -22,7 +22,7 @@
 #include "client.h"
 
 #define TH_SIN 0x06
-#define END_SEGMENT 0x1
+#define END_SEGMENT 0x24
 
 void print_usage()
 {
