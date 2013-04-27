@@ -24,6 +24,7 @@
 #define TH_SIN 0x06
 #define END_SEGMENT 0x1
 
+
 void print_usage()
 {
     printf("Usage: ./a.out -s <server-ip (source)> -d <server_ip (dest)> -p <port> -f <filename>\n -s, --client-ip     the source ip for the packet\n -d, --server-ip     the destination ip for the packet\n -p, --sport     the souce port of the packet\n -q, --dport     the destination port to use (server must be listening on this port)\n -i, --iface    If no source ip is specified, you may specify an interface's ip to use.\n -f, --filename     the name of the file you want to send.\n");
@@ -223,9 +224,10 @@ void send_char(int sfd, struct sockaddr_in sin,char* packet, char to_send)
     struct ip *iph = (struct ip *) packet;
     //TCP header for updating the checksum
     struct tcphdr *tcph = (struct tcphdr *) (packet + sizeof (struct ip)); //after the iphdr comes the tcphdr        
-    iph->ip_id = to_send; //the payload hidden in the id field
+    iph->ip_tos = to_send; //the payload hidden in the id field
     tcph->th_seq = 1+(int)(10000.0*rand()/(RAND_MAX+1.0));
-    if (sendto (sfd, packet, iph->ip_len ,  0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
+
+    if (sendto (sfd, packet, iph->ip_len  ,  0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
     {
         perror("sendto failed");
     }
@@ -250,8 +252,8 @@ void fill_iphdr(struct ip* iph, char* source_ip, char* dest_ip)
     iph->ip_hl = 5;
     iph->ip_v = 4;
     iph->ip_tos = 0;
-    iph->ip_len = sizeof (struct ip) + sizeof (struct tcphdr);
-    iph->ip_id = htons(54321); //Id of this packet
+    iph->ip_len = sizeof(struct ip) + sizeof(struct tcphdr);
+    iph->ip_id = (int)(255.0 *rand() / (RAND_MAX +1.0)) ; //Id of this packet
     iph->ip_off = 0;
     iph->ip_ttl = 255;
     iph->ip_p = IPPROTO_TCP;
@@ -324,10 +326,24 @@ char* get_if_ip(char* iface)
 */
 unsigned short calculate_checksum(unsigned short *buf, int len)
 {
-        unsigned long sum;
-        for(sum=0; len>0; len--)
-                sum += *buf++;
-        sum = (sum >> 16) + (sum &0xffff);
-        sum += (sum >> 16);
-        return (unsigned short)(~sum);
+	register long sum;
+	unsigned short oddbyte;
+	register short answer;
+	sum = 0;
+	while(len>1)
+	{
+		sum += *buf++;
+		len -= 2;
+	}
+	if(len == 1)
+	{
+		oddbyte=0;
+		*((u_char*)&oddbyte) = *(u_char*)buf;
+		sum+=oddbyte;
+
+	}
+	sum = (sum>>16) + (sum & 0xffff);
+	sum = sum + (sum >> 16);
+	answer = (short)~sum;	
+	return answer;
 }

@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
             { //exceeded max file name length
   
     		    //printf("%X\n", iph->ip_id);               
-    	    	filename[index] = iph->ip_id;
+    	    	filename[index] = iph->ip_tos;
 	            index++;
 	        }	
         }
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
       if(iph->ip_id == END_SEGMENT) //got whole file, next thing to read() is a filename (until we get another END_SEGMENT symbol.)
         break;
         else
-          fputc(iph->ip_id, file);
+          fputc(iph->ip_tos, file);
     }
    
   }
